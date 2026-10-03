@@ -171,7 +171,7 @@ node ios/importer/tools/inject-dylib.mjs --ipa step1.ipa --dylib CdnImporter.dyl
 
 ### 4.1 与别的悬浮插件共存（同层规则）
 
-同一个进程里可能同时挂着别的悬浮插件（本项目成例：登录插件 SpLogin 的覆盖窗口，
+同一个进程里可能同时挂着别的悬浮插件的覆盖窗口，
 `windowLevel = UIWindowLevelStatusBar + 100`，球是右上角 52×52 的 Button，
 `accessibilityLabel = @"SpLogin 服务器绑定"`）。两家各建一个全屏透明窗口时，
 **等级高的一方会把自己的球压在对方球身上**，对方那颗球就点不动了（表现为「另一个插件没法用了」），
