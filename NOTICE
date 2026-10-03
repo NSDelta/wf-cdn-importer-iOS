@@ -1,0 +1,22 @@
+# NOTICE
+
+StarPoint CN 是世界弹射物语(World Flipper)CN(雷霆 Leiting)版本的服务端模拟器,
+为非官方的互通性 / 研究性项目,与游戏及其权利方无任何关联。
+
+## 许可
+
+- 本仓库以 **GPL-3.0-or-later** 许可发布(见 `LICENSE` 文件)。
+- 本项目派生自 GPL-3.0 的上游 [Duosion/starpoint](https://github.com/Duosion/starpoint),按 GPL copyleft 要求保持同一许可。
+
+## 归属 / 上游
+
+- 基于上游全球服模拟器 [Duosion/starpoint](https://github.com/Duosion/starpoint)。
+- 资源提取 / 转换工具:[wdfp-extractor](https://github.com/ScripterSugar/wdfp-extractor)、[wfax](https://github.com/blead/wfax)。
+- APK 打补丁工具:[starview](https://github.com/duosii/starview)(GPL-3.0)。其最小补丁集为本仓库本地扩展,见 `client-patch/`。
+- 协议实现参考 CN 客户端反编译资料 [wf-2.1.125-cn-decompiled](https://github.com/dennis96292/wf-2.1.125-cn-decompiled)(GPL-3.0,仅作分析参考,未并入本仓库)。
+
+## 逆向工程说明
+
+`client-patch/` 中描述的客户端改动(免登录 / 重定向)及对反编译客户端的引用,
+仅用于使自有客户端与本地服务端互通,供个人 / 研究用途。游戏资源(CDN、APK、漫画等)
+不随本仓库分发,需使用者自备。

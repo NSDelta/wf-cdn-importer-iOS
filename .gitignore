@@ -1,0 +1,30 @@
+# 构建产物 / 本地脚本产物（本仓库不提交任何二进制）
+out/
+build/
+dist/
+*.ipa
+*.dylib
+*.app
+*.o
+*.log
+*.build-report.json
+mini.ipa
+mini-injected.ipa
+
+# 依赖与缓存
+node_modules/
+.npm/
+
+# CDN 归档与分卷（10 GB 级，绝不进仓库）
+archive-*.zip
+*.tar
+*.tar.part.*
+
+# 系统 / 编辑器
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*~
