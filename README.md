@@ -67,6 +67,8 @@ https://github.com/NSDelta/wf-cdn-importer-iOS/releases/download/cdn-importer-la
 
 ### 2. 注入到 IPA
 
+在使用[IPApatcher](https://github.com/dennis96292/startpoint-cn-launcher/blob/main/tools/patch-ipa.mjs)的基础上
+
 ```bash
 node ios/importer/tools/inject-dylib.mjs \
   --ipa   /path/to/official.ipa \
