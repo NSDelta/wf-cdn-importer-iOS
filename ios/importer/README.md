@@ -3,11 +3,13 @@
 把自建 CDN 目录里的 634 个归档**在设备本机**解压导入到游戏的沙盒资源目录，
 让客户端启动时认为「资源已下载完成」，从而跳过官方 CDN 的 10.7GB 下载。
 
-- 目标目录：`<容器>/Library/Application Support/com.leiting.wf/Local Store/asset/asset_download/dummy/`
-  （`download/**` 放解压出来的资源，`info.json` 描述版本与规模）
+- 目标目录：`<容器>/Library/Application Support/<app id>/Local Store/asset/asset_download/<子目录>/`
+  （`download/**` 放解压出来的资源，`info.json` 描述版本与规模）。国服是 `com.leiting.wf`，但
+  **导入器不要求任何特定 bundle id / app id**：`Local Store` 按磁盘证据探测（哪个目录有
+  `asset/asset_download` 就用哪个），bundle id 只在没有证据时兜底 —— 见 §9。
 - 交付形态：**一支注入游戏进程的 dylib**（`CdnImporter.dylib`）。非越狱设备上没有第二个进程能写进游戏的
   `Application Support`，所以导入器必须运行在游戏进程内；dylib 通过往 IPA 主二进制追加一条
-  `LC_LOAD_DYLIB` + 重签侧载进入设备。
+  `LC_LOAD_DYLIB` + 重签侧载进入设备。注入器同样不认包名：主二进制按 `Payload/<X>.app/<X>` 自动探测。
 - 数据来源：**iOS 文件 App**（`UIDocumentPickerViewController`）。用户在文件 App 里选「文件夹」或「多个文件」，
   导入器拿到 security-scoped URL 后读取，归档本身留在 SMB / iCloud Drive / On My iPhone 原地，不占容器空间。
 
@@ -129,7 +131,8 @@ node ios/importer/tools/inject-dylib.mjs --ipa step1.ipa --dylib CdnImporter.dyl
 
 注入器做了什么、保证了什么（`tools/inject-dylib.mjs`，纯 Node，Windows 可跑）：
 
-- 定位主二进制（`Payload/<App>.app/<App>`，找不到时读 `Info.plist` 的 `CFBundleExecutable` 兜底）。
+- 定位主二进制（`Payload/<X>.app/<X>` **自动探测**，不要求任何 app 名 / bundle id；目录名与可执行名不同时
+  读 `Info.plist` 的 `CFBundleExecutable` 兜底；IPA 里有多个候选才需要 `--app=<名>` 显式指定）。
 - 在**命令区末尾**（`32 + sizeofcmds`）写入一条 `LC_LOAD_DYLIB`（`cmdsize` 8 字节对齐，34 字符 install name → 72 字节），
   `ncmds+1`、`sizeofcmds+72`；段与所有 section 的文件偏移/尺寸**一个都不动**。
 - dylib 条目写入 `Payload/<App>.app/Frameworks/<install name 的基名>`（默认也就是 `CdnImporter.dylib`），mode `0755`，紧跟主二进制条目。
@@ -285,7 +288,16 @@ node tools/run-tests.cjs                            # 4 个测试文件（ZIP �
   ③ `asset_download` 下只有一个子目录（游戏建过，哪怕还空着）→ 采用；
   ④ 以上都没有 → 回退 `dummy`，并在面板把该行标成「**[推断]**」（①②③ 标「[已确证]」）。
   要消除这最后一点不确定性：**先让游戏跑一次资源检查/下载（几秒即可，让它把目录建出来）再导入**。
-  也可用 `NSUserDefaults` 键 `CdnImporterStorageRoot` 覆写根目录。
+- **不要求 bundle id / app id**（v1.5）：`Local Store` 上层的目录名，在 iOS 上既可能是 Info.plist 的
+  `CFBundleIdentifier`，也可能是 SWF 描述符里的 AIR app id —— 重签名换个 bundle id 之后两者就可能不一致。
+  所以导入器不认包名，按**磁盘证据**选：候选 = bundle id 目录 + `Application Support` 下所有目录，
+  打分（有 `asset/asset_download` +8、有 `asset` +2、目录存在 +1、bundle id 相符 +1）取最高分；
+  一个都没有（游戏还没跑过）才按 bundle id 预置目录并创建。面板与日志会打印这一行，例如
+  `Local Store：com.leiting.wf（与 bundle id 一致）`、
+  `Local Store：com.leiting.wf（bundle id 是 com.foo.bar，但游戏把资产写在这个目录）`。
+  要手工指定就设 `NSUserDefaults` 键 `CdnImporterStorageRoot`（绝对路径）。
+  自检里也有规则盯着这件事：把包名写死进 `Application Support` 路径、或用 `stringByAppendingPathComponent:@"com.x.y"`
+  这种写法，`lint-objc.mjs` 直接报错。
 - 越狱机不需要本线（越狱线的 MobileSubstrate 注入不在本仓库）。
 - 输入列表（追加式选择的结果）只存在于**本次进程内**，不落盘：游戏重启后要重新选。面板在选每一项时就会
   `startAccessingSecurityScopedResource` 并在「撤销上次 / 清空选择」时归还，所以分多批加进来的目录在

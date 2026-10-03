@@ -164,6 +164,45 @@ test("静态自检能抓出「逐条目解压却没有 autorelease 池」", asyn
     }
 })
 
+test("静态自检能抓出「把 bundle id 写死进路径」", async () => {
+    const run = await loadLint()
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cdn-lint-bundleid-"))
+    try {
+        fs.writeFileSync(path.join(dir, "Paths.h"), [
+            "#import <Foundation/Foundation.h>",
+            "",
+            "@interface Paths : NSObject",
+            "@end",
+            "",
+        ].join("\n"))
+        // 写死包名（两条常见写法）/ 从 NSBundle 现取各写一份：前者必须被抓，后者必须放行
+        const body = (hardcoded) => [
+            "#import \"Paths.h\"",
+            "",
+            "@implementation Paths",
+            "- (NSString *)store",
+            "{",
+            hardcoded
+                ? "    return [NSHomeDirectory() stringByAppendingPathComponent:@\"Library/Application Support/com.leiting.wf\"];"
+                : "    NSString *bundleID = [NSBundle mainBundle].bundleIdentifier ?: @\"\";",
+            hardcoded
+                ? "}"
+                : "    return [[NSHomeDirectory() stringByAppendingPathComponent:@\"Library/Application Support\"]"
+                    + " stringByAppendingPathComponent:bundleID];\n}",
+            "@end",
+            "",
+        ].join("\n")
+
+        fs.writeFileSync(path.join(dir, "Paths.m"), body(true))
+        assert.match(run(dir, { quiet: true }).problems.join("\n"), /把 bundle id 拼进了 Application Support 路径/)
+
+        fs.writeFileSync(path.join(dir, "Paths.m"), body(false))
+        assert.deepEqual(run(dir, { quiet: true }).problems, [])
+    } finally {
+        fs.rmSync(dir, { recursive: true, force: true })
+    }
+})
+
 test("静态自检能抓出「用了类但没引入声明它的头」", async () => {
     const run = await loadLint()
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cdn-lint-import-"))

@@ -5,13 +5,16 @@
 它把一个动态库（`CdnImporter.dylib`）注入到官方 IPA 里，侧载后跑在游戏自己的进程内：游戏沙盒里出现一个悬浮球，你把官方 CDN 的归档压缩包（zip / tar 分卷 / 整包）交给它，它会**按快照 + diff 链的正确顺序**把 634 个归档解压进
 
 ```
-<容器>/Library/Application Support/com.leiting.wf/Local Store/asset/asset_download/<子目录>/download/
+<容器>/Library/Application Support/<app id>/Local Store/asset/asset_download/<子目录>/download/
 ```
+
+（国服就是 `com.leiting.wf`。**导入器不要求任何特定 bundle id / app id**：`Local Store` 是按磁盘证据探测的 —— 哪个目录里有游戏留下的 `asset/asset_download` 就用哪个；注入器也不认包名，`Payload/<X>.app/<X>` 自动探测见下。）
 
 并写一份 `info.json`、删掉 4 个 `partial_downloaded*` —— 客户端启动时判定「资源已下载且完整」，于是**不再联网下载那 9.5 GB 资源**。
 
 * **非越狱**：不加 MobileSubstrate、不 hook 任何方法、不做方法交换，只是一个 `__attribute__((constructor))` + 悬浮球 + 文件写入。
 * **不碰客户端的下载链路**：不改网络、不拦下载、不模拟服务器；它只是提前把文件放到位。
+* **不绑定包名**：不认 bundle id、不认 app 名字、不读 Info.plist 的 `CFBundleIdentifier`；换签名/换包名（AIR 的 app id 与 Info.plist 不一致时也一样）都照常工作。
 * **可离线**：全部解压与校验在设备本地完成，导入过程不需要联网（只有游戏本身连你的服务器时需要局域网）。
 
 > 本仓库**不含**游戏本体、IPA 与任何 CDN 数据。需要你自备正版 IPA 与自己的 CDN 归档。

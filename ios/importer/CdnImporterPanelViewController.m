@@ -223,6 +223,7 @@ static BOOL CdnPanelNameLooksLikeTar(NSString *name) {
     BOOL downloadExists = [[NSFileManager defaultManager] fileExistsAtPath:CdnImporterAssetDownloadDir()];
     [text appendFormat:@"目标目录：%@ %@\n", CdnImporterTargetDirectoryNote(),
                        CdnImporterTargetDirectoryIsEvidenceBacked() ? @"[已确证]" : @"[推断]"];
+    [text appendFormat:@"Local Store：%@\n", CdnImporterStorageRootNote()];
     [text appendFormat:@"download 目录：%@\n", downloadExists ? @"存在" : @"不存在（首次导入会创建）"];
 
     NSError *spaceError = nil;

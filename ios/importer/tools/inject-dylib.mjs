@@ -48,7 +48,7 @@ function parseArgs(argv) {
         ipa: "",
         dylib: "",
         out: "",
-        app: "worldflipper",
+        app: "",
         installName: DEFAULT_INSTALL_NAME,
         report: "",
         dryRun: false,
@@ -85,7 +85,8 @@ function parseArgs(argv) {
 
 选项：
   --out=<路径>            输出 IPA（默认 <输入>-cdn.ipa）
-  --app=<名>              应用名（默认 worldflipper，用于定位 Payload/<名>.app/<名>）
+  --app=<名>              应用名；默认自动探测 Payload/<名>.app/<名>（不要求特定 app / bundle id），
+                          只有 IPA 里有多个候选时才需要指定
   --install-name=<路径>   LC_LOAD_DYLIB 路径（默认 ${DEFAULT_INSTALL_NAME}）
   --report=<路径>         报告 JSON（默认 <输出>.build-report.json）
   --dry-run               只做检查与内存改写，不写文件
@@ -183,22 +184,33 @@ function buildLoadDylib(installName) {
 
 function locateMainBinary(entries, buffer, appName) {
     let mainEntry = null
+    let corrected = ""
     try {
         mainEntry = findMainBinaryEntry(entries, appName)
     } catch (error) {
-        // 兜底：从 Info.plist 读 CFBundleExecutable
+        // 多候选必须显式指定 app 名：这种情况下「猜一个」比报错危险得多
+        const candidates = entries.filter((entry) => /^Payload\/([^/]+)\.app\/\1$/.test(entry.name))
+        if (candidates.length > 1) throw error
+        // 兜底：从 Info.plist 读 CFBundleExecutable。这里**不拼 appName** ——
+        // app 目录名与可执行名都从 IPA 自己身上取，任何 app / bundle id 都能注入。
         const infoEntry = entries.find((entry) => /^Payload\/[^/]+\.app\/Info\.plist$/.test(entry.name))
         if (infoEntry) {
+            const appDir = infoEntry.name.slice(0, infoEntry.name.lastIndexOf("/"))
             const text = readEntryData(infoEntry).toString("utf8")
             const match = text.match(/<key>CFBundleExecutable<\/key>\s*<string>([^<]+)<\/string>/)
             if (match) {
-                const wanted = `Payload/${appName}.app/${match[1]}`
+                const wanted = `${appDir}/${match[1]}`
                 mainEntry = entries.find((entry) => entry.name === wanted) ?? null
+                if (mainEntry && appName) corrected = appName
             }
         }
         if (!mainEntry) throw error
     }
     const bin = readEntryData(mainEntry)
+    if (corrected) {
+        console.log(`提示：按 --app=${corrected} 找不到 Payload/${corrected}.app/${corrected}，`
+            + `已用 IPA 内 Info.plist 的 CFBundleExecutable 定位到 ${mainEntry.name}`)
+    }
     return { mainEntry, bin }
 }
 

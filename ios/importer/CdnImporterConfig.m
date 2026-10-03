@@ -148,42 +148,86 @@ static NSString *CdnImporterApplicationSupport(void) {
     return [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support"];
 }
 
-/// 找一个「已经存在的」Local Store：优先 bundle id 对应的目录，其次 Application Support 下任意
-/// `*/Local Store`（防 bundle id 与 AIR 实际使用的 app-id 不一致）。找不到返回 nil。
-static NSString * _Nullable CdnImporterExistingStorageRoot(void) {
+/// 给一个候选 Local Store 打分（0 = 不存在，不参与竞选）。
+/// 分数只看磁盘证据 —— 导入器不要求任何特定 bundle id。
+static NSInteger CdnImporterLocalStoreScore(NSString *localStore, BOOL matchesBundleID) {
+    NSFileManager *manager = [NSFileManager defaultManager];
+    BOOL isDirectory = NO;
+    if (![manager fileExistsAtPath:localStore isDirectory:&isDirectory] || !isDirectory) return 0;
+    NSInteger score = 1;
+    if ([manager fileExistsAtPath:[localStore stringByAppendingPathComponent:@"asset"]]) score += 2;
+    if ([manager fileExistsAtPath:[localStore stringByAppendingPathComponent:@"asset/asset_download"]]) score += 8;
+    if (matchesBundleID) score += 1;
+    return score;
+}
+
+/// 解析 Local Store 根，并把「为什么是它」写进 *outNote。
+///
+/// 为什么不认 bundle id：iOS 上 AIR 的 File.applicationStorageDirectory 落在
+/// `<Application Support>/<app id>/Local Store`，这个 id 既可能是 Info.plist 的 CFBundleIdentifier，
+/// 也可能是 SWF 描述符里的 AIR app id —— 重签名换个 bundle id 之后两者就可能不一致。
+/// 所以这里以「哪个目录里有游戏留下的资产痕迹」为准，bundle id 只用来当同分时的加分与最后的兜底。
+static NSString *CdnImporterResolveStorageRoot(NSString **outNote) {
     NSFileManager *manager = [NSFileManager defaultManager];
     NSString *appSupport = CdnImporterApplicationSupport();
-    NSString *bundleID = [NSBundle mainBundle].bundleIdentifier;
+    NSString *bundleID = [NSBundle mainBundle].bundleIdentifier ?: @"";
+
+    NSString *override = [[NSUserDefaults standardUserDefaults] stringForKey:CdnImporterStorageRootKey];
+    if (override.length > 0) {
+        if (outNote != NULL) *outNote = [NSString stringWithFormat:@"CdnImporterStorageRoot 覆写：%@", override];
+        return override;
+    }
+
     NSMutableArray<NSString *> *candidates = [NSMutableArray array];
-    if (bundleID.length > 0) {
-        [candidates addObject:[appSupport stringByAppendingPathComponent:bundleID]];
+    if (bundleID.length > 0) [candidates addObject:bundleID];
+    for (NSString *entry in [manager contentsOfDirectoryAtPath:appSupport error:NULL]) {
+        if (![candidates containsObject:entry]) [candidates addObject:entry];
     }
-    NSArray<NSString *> *entries = [manager contentsOfDirectoryAtPath:appSupport error:NULL];
-    for (NSString *entry in entries) {
-        NSString *candidate = [appSupport stringByAppendingPathComponent:entry];
-        if (![candidates containsObject:candidate]) [candidates addObject:candidate];
-    }
-    BOOL isDirectory = NO;
-    for (NSString *candidate in candidates) {
-        NSString *localStore = [candidate stringByAppendingPathComponent:@"Local Store"];
-        if ([manager fileExistsAtPath:localStore isDirectory:&isDirectory] && isDirectory) {
-            return localStore;
+
+    NSString *bestRoot = nil;
+    NSString *bestID = nil;
+    NSInteger bestScore = 0;
+    for (NSString *identifier in candidates) {
+        NSString *localStore = [[appSupport stringByAppendingPathComponent:identifier]
+                                stringByAppendingPathComponent:@"Local Store"];
+        BOOL matches = (bundleID.length > 0 && [identifier isEqualToString:bundleID]);
+        NSInteger score = CdnImporterLocalStoreScore(localStore, matches);
+        if (score <= 0) continue;
+        if (bestRoot == nil || score > bestScore) {
+            bestRoot = localStore;
+            bestID = identifier;
+            bestScore = score;
         }
     }
-    return nil;
+    if (bestRoot != nil) {
+        if (outNote != NULL) {
+            BOOL matches = (bundleID.length > 0 && [bestID isEqualToString:bundleID]);
+            *outNote = matches
+                ? [NSString stringWithFormat:@"%@（与 bundle id 一致）", bestID]
+                : [NSString stringWithFormat:@"%@（bundle id 是 %@，但游戏把资产写在这个目录）",
+                                             bestID, bundleID.length > 0 ? bundleID : @"未知"];
+        }
+        return bestRoot;
+    }
+
+    NSString *fallbackID = bundleID.length > 0 ? bundleID : @"com.leiting.wf";
+    if (outNote != NULL) {
+        *outNote = bundleID.length > 0
+            ? [NSString stringWithFormat:@"%@（游戏还没跑过、没有资产痕迹，按 bundle id 预置）", fallbackID]
+            : [NSString stringWithFormat:@"%@（连 bundle id 都取不到，用与国服一致的默认值）", fallbackID];
+    }
+    return [[appSupport stringByAppendingPathComponent:fallbackID]
+            stringByAppendingPathComponent:@"Local Store"];
 }
 
 NSString *CdnImporterStorageRoot(void) {
-    NSString *override = [[NSUserDefaults standardUserDefaults] stringForKey:CdnImporterStorageRootKey];
-    if (override.length > 0) return override;
+    return CdnImporterResolveStorageRoot(NULL);
+}
 
-    NSString *existing = CdnImporterExistingStorageRoot();
-    if (existing != nil) return existing;
-
-    NSString *bundleID = [NSBundle mainBundle].bundleIdentifier;
-    if (bundleID.length == 0) bundleID = @"com.leiting.wf";
-    return [[CdnImporterApplicationSupport() stringByAppendingPathComponent:bundleID]
-            stringByAppendingPathComponent:@"Local Store"];
+NSString *CdnImporterStorageRootNote(void) {
+    NSString *note = nil;
+    (void)CdnImporterResolveStorageRoot(&note);
+    return note ?: @"未知";
 }
 
 // asset_download 下的实际子目录名（解析一次后进程内缓存）。

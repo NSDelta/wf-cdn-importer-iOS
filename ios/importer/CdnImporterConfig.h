@@ -65,9 +65,17 @@ NSString *CdnImporterLogTail(NSUInteger maxLines);
 
 #pragma mark - 目标目录（app 沙盒内）
 
-/// 解析 Local Store 根：优先「已存在的 <Application Support>/<某 id>/Local Store」，
-/// 否则按 bundle id 拼（并创建）。AIR 的 File.applicationStorageDirectory 就落在这里。
+/// 解析 Local Store 根。**不要求任何特定 bundle id / app id**：
+///   1) NSUserDefaults 键 `CdnImporterStorageRoot` 覆写优先（调试用）；
+///   2) 扫 `<Application Support>/*/Local Store`，按磁盘证据取最强的那个
+///      （有 `asset/asset_download` > 有 `asset` > 只是存在；bundle id 相符只在同分时加分）——
+///      AIR 的 File.applicationStorageDirectory 落在这里，而它的目录名既可能是 Info.plist 的
+///      CFBundleIdentifier，也可能是 SWF 描述符里的 app id，重签名后两者可能不一致；
+///   3) 一个都不存在（游戏还没跑过）才按 bundle id 预置路径，交给 CdnImporterEnsureDirectory 创建。
 NSString *CdnImporterStorageRoot(void);
+
+/// Local Store 根的判定说明（人类可读，面板/日志直接展示；永不为 nil）
+NSString *CdnImporterStorageRootNote(void);
 
 /// <Local Store>/asset/asset_download/dummy
 /// 注意：子目录名是「探测」出来的（客户端开始下载时才创建它）。见下面两个函数。

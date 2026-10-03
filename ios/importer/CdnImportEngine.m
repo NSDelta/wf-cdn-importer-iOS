@@ -220,6 +220,7 @@ NSString *CdnImportStageName(CdnImportStage stage) {
     [self log:@"目标目录 %@（%@；%@）", CdnImporterAssetDownloadDir(),
           CdnImporterTargetDirectoryIsEvidenceBacked() ? @"已确证" : @"推断",
           CdnImporterTargetDirectoryNote()];
+    [self log:@"Local Store %@（%@）", CdnImporterStorageRoot(), CdnImporterStorageRootNote()];
 
     if (inputURLs.count == 0) {
         if (error != NULL) *error = CdnError(CdnImporterErrorPlan, @"没有选择任何文件或文件夹");

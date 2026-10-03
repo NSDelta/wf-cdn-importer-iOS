@@ -134,10 +134,10 @@ jobs:
           fi
           node ios/importer/tools/make-mini-ipa.mjs --out "$RUNNER_TEMP/out/mini.ipa" --app CdnImporterSmoke \
             2>&1 | tee "$RUNNER_TEMP/smoke.log"
+          # 故意不传 --app：CI 顺带验证「注入器自己按 Payload/<X>.app/<X> 认主二进制」
           node ios/importer/tools/inject-dylib.mjs \
             --ipa "$RUNNER_TEMP/out/mini.ipa" \
             --dylib "$DYLIB" \
-            --app CdnImporterSmoke \
             --out "$RUNNER_TEMP/out/mini-injected.ipa" \
             2>&1 | tee -a "$RUNNER_TEMP/smoke.log"
           node -e "const r=require(process.env.RUNNER_TEMP+'/out/mini-injected.ipa.build-report.json'); const bad=r.assertions.filter(a=>!a.ok); if(bad.length){console.error('注入断言失败：',bad);process.exit(1)} console.log('注入断言 '+r.assertions.length+' 条全过；ncmds '+r.injection.ncmdsBefore+'→'+r.injection.ncmdsAfter+'，sizeofcmds '+r.injection.sizeofcmdsBefore+'→'+r.injection.sizeofcmdsAfter);" \

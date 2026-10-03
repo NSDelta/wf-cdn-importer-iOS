@@ -186,6 +186,22 @@ function run(directory, { quiet = false } = {}) {
             problems.push(`${name}: 调用 extractEntry: 解压却没有 @autoreleasepool —— ` +
                 `逐条目的 autoreleased 分块会攒满内存、分配失败后报「读 … 失败: Bad address」`)
         }
+        // bundle id 纪律：导入器**不要求任何特定 bundle id / app id**。
+        // AIR 的 Local Store 目录名既可能是 Info.plist 的 CFBundleIdentifier，也可能是 SWF 描述符里的
+        // app id（重签名后两者就可能不一致），所以只能按磁盘证据探测，或从 NSBundle 现取；
+        // 把包名当常量拼进路径，换个包名/换个签名就会写到错地方（面板与日志还看不出来）。
+        // 注意用 keepLiterals 的文本：包名本身就写在字符串字面量里。
+        const codeWithLiterals = scanText.get(name)
+        for (const match of codeWithLiterals.matchAll(/Application Support\/com\.[A-Za-z0-9._-]+/g)) {
+            const line = codeWithLiterals.slice(0, match.index).split("\n").length
+            problems.push(`${name}:${line} 把 bundle id 拼进了 Application Support 路径` +
+                `（${match[0]}）—— 导入器不要求 bundle id：用 CdnImporterStorageRoot()`)
+        }
+        for (const match of codeWithLiterals.matchAll(/(?:stringByAppendingPathComponent|stringByAppendingString)\s*:\s*@"(?:[A-Za-z0-9-]+\.){2,}[A-Za-z]{2,}"/g)) {
+            const line = codeWithLiterals.slice(0, match.index).split("\n").length
+            problems.push(`${name}:${line} 用写死的 bundle id 当路径组件（${match[0].slice(-24)}）—— ` +
+                `导入器不要求 bundle id：用 NSBundle.mainBundle.bundleIdentifier 或 CdnImporterStorageRoot()`)
+        }
     }
 
     // #import "xxx.h" 必须存在

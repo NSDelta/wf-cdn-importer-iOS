@@ -100,16 +100,23 @@ function storedEntry(name, data, mode = 0o100644) {
     }
 }
 
-function makeFixture({ textOffset = DEFAULT_TEXT_OFFSET, padByte = 0, dylibFiletype = 6 } = {}) {
+function makeFixture({
+    textOffset = DEFAULT_TEXT_OFFSET,
+    padByte = 0,
+    dylibFiletype = 6,
+    appDir = "TestApp",
+    execName = "TestApp",
+} = {}) {
     const main = buildMachO({ filetype: 2, textOffset, padByte })
     const dylib = buildMachO({ filetype: dylibFiletype, totalSize: 0x8000 })
     const plist = Buffer.from(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\"><dict>"
-        + "<key>CFBundleExecutable</key><string>TestApp</string></dict></plist>\n")
+        + `<key>CFBundleExecutable</key><string>${execName}</string>`
+        + "<key>CFBundleIdentifier</key><string>com.example.whatever</string></dict></plist>\n")
     const ipa = tools.writeZipEntries([
-        storedEntry("Payload/TestApp.app/TestApp", main, 0o100755),
-        storedEntry("Payload/TestApp.app/Info.plist", plist),
-        storedEntry("Payload/TestApp.app/extra.bin", Buffer.from("cdn importer fixture\n")),
+        storedEntry(`Payload/${appDir}.app/${execName}`, main, 0o100755),
+        storedEntry(`Payload/${appDir}.app/Info.plist`, plist),
+        storedEntry(`Payload/${appDir}.app/extra.bin`, Buffer.from("cdn importer fixture\n")),
     ])
     return { main, dylib, ipa }
 }
@@ -211,6 +218,47 @@ test("注入器：dry-run 不落盘但报告完整", async () => {
         assert.equal(fs.existsSync(path.join(dir, "report.json")), false)
         assert.deepEqual(report.assertions.filter((item) => !item.ok), [])
         assert.equal(report.injection.skipped, undefined)
+    })
+})
+
+test("注入器：不传 app 名也能注入（不要求特定 app / bundle id）", async () => {
+    await loadTools()
+    const fixture = makeFixture()
+
+    withTempDir((dir) => {
+        // app 名留空 = 让注入器自己从 `Payload/<X>.app/<X>` 里认；这正是「不要求 bundle id」
+        // 的那条路径：注入器不看 Info.plist 的 CFBundleIdentifier，也不看 app 目录叫什么。
+        const { report } = runInjection(dir, fixture, { app: "" })
+
+        assert.equal(report.injection.mainEntry, "Payload/TestApp.app/TestApp")
+        assert.equal(report.injection.dylibEntryName, "Payload/TestApp.app/Frameworks/CdnImporter.dylib")
+        assert.deepEqual(report.assertions.filter((item) => !item.ok), [])
+    })
+})
+
+test("注入器：app 目录名与可执行名不同时，按 Info.plist 的 CFBundleExecutable 定位", async () => {
+    await loadTools()
+    const fixture = makeFixture({ appDir: "Whatever", execName: "RenamedExec" })
+
+    withTempDir((dir) => {
+        const { report } = runInjection(dir, fixture, { app: "" })
+
+        assert.equal(report.injection.mainEntry, "Payload/Whatever.app/RenamedExec")
+        assert.equal(report.injection.dylibEntryName, "Payload/Whatever.app/Frameworks/CdnImporter.dylib")
+        assert.deepEqual(report.assertions.filter((item) => !item.ok), [])
+    })
+})
+
+test("注入器：IPA 里有多个候选主二进制时必须显式指定 --app（不瞎猜）", async () => {
+    await loadTools()
+    const fixture = makeFixture()
+    const extra = storedEntry("Payload/Other.app/Other", buildMachO({ filetype: 2 }), 0o100755)
+
+    withTempDir((dir) => {
+        const entries = tools.readZipEntries(fixture.ipa)
+        const twoApps = tools.writeZipEntries([...entries, extra])
+        assert.throws(() => runInjection(dir, { ...fixture, ipa: twoApps }, { app: "" }),
+            /多个候选主二进制/)
     })
 })
 

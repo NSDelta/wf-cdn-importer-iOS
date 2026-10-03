@@ -30,6 +30,7 @@ __attribute__((constructor)) static void CdnImporterEntry(void) {
                        (int)getpid(), bundle.bundleIdentifier ?: @"?",
                        bundle.executablePath.lastPathComponent ?: @"?");
         CdnImporterLog(@"[entry] 目标目录：%@", CdnImporterAssetDownloadDir());
+        CdnImporterLog(@"[entry] Local Store：%@（%@）", CdnImporterStorageRoot(), CdnImporterStorageRootNote());
         CdnImporterLog(@"[entry] 日志文件：%@", CdnImporterLogPath());
         CdnImporterLog(@"[entry] 导入计划：%@ 个归档（%@ → %@），压缩态 %@",
                        @([CdnImportPlan sharedPlan].items.count),
