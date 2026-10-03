@@ -138,7 +138,7 @@ node ios/importer/tools/verify-plan.mjs --cdn <你的 cdn 目录> --quiet
 `.github/workflows/ios-importer.yml`（push 到 `ios/importer/**` 或 `tools/**` 或手动派发）：
 
 * **test**：`lint-objc.mjs --stats` + `tools/run-tests.cjs`；
-* **build**（macos runner，本机是 Windows 编不了 ObjC）：
+* **build**（macos runner）：
 
 ```bash
 xcrun -sdk iphoneos clang -arch arm64 -dynamiclib \
