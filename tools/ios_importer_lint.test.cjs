@@ -296,3 +296,16 @@ test("静态自检对干净的头文件/实现文件不报问题", async () => {
         fs.rmSync(dir, { recursive: true, force: true })
     }
 })
+
+// 计划目标版本冻结在 1.4.54，而客户端会自己联网升到更高版本（1.4.55/1.4.56）。
+// 完整度判断必须用「不早于计划目标」，否则联网升级后悬浮球会被放回来（显示「版本不符」）。
+test("资源完整度判断用「不早于计划目标」而不是相等", async () => {
+    const source = fs.readFileSync(path.join(IMPORTER_DIR, "CdnImporterConfig.m"), "utf8")
+
+    assert.match(source, /CdnImporterAssetVersionIsCurrent\(version, \[CdnImportPlan sharedPlan\]\.targetVersion\)/)
+    assert.doesNotMatch(source, /\[version isEqualToString:\[CdnImportPlan sharedPlan\]\.targetVersion\]/)
+    assert.doesNotMatch(source, /版本不符/)
+
+    const header = fs.readFileSync(path.join(IMPORTER_DIR, "CdnImporterConfig.h"), "utf8")
+    assert.match(header, /version 不早于计划目标版本/)
+})

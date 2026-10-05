@@ -374,7 +374,27 @@ BOOL CdnImporterForceBallEnabled(void) {
     return [value boolValue];
 }
 
+/// 形如 1.4.54 的版本号比较（段数不同按 0 补，非数字段按 0；"1.4.10" > "1.4.9"）。
+static NSComparisonResult CdnImporterCompareAssetVersions(NSString *lhs, NSString *rhs) {
+    NSArray<NSString *> *left = [lhs componentsSeparatedByString:@"."];
+    NSArray<NSString *> *right = [rhs componentsSeparatedByString:@"."];
+    NSUInteger count = MAX(left.count, right.count);
+    for (NSUInteger index = 0; index < count; index++) {
+        NSInteger a = index < left.count ? left[index].integerValue : 0;
+        NSInteger b = index < right.count ? right[index].integerValue : 0;
+        if (a != b) return a < b ? NSOrderedAscending : NSOrderedDescending;
+    }
+    return NSOrderedSame;
+}
+
+/// info.json 的 version 是否「不早于」计划目标版本：相等或更新都算完整。
+/// 客户端联网自升级（计划 1.4.54 → 线上 1.4.56）后资源依然完整，不该把悬浮球再放出来。
+static BOOL CdnImporterAssetVersionIsCurrent(NSString *version, NSString *target) {
+    return CdnImporterCompareAssetVersions(version, target) != NSOrderedAscending;
+}
+
 /// 与客户端 isDownloaded()/isAssetComplete() 同口径的就地判断（读 10 KB 级的 info.json + 几次 stat）。
+/// 唯一放宽处：version 用「不早于计划目标」而不是相等（见上一个函数）。
 BOOL CdnImporterAssetsAreComplete(void) {
     NSFileManager *manager = [NSFileManager defaultManager];
     if (![manager fileExistsAtPath:CdnImporterAssetDownloadDir()]) return NO;
@@ -391,7 +411,7 @@ BOOL CdnImporterAssetsAreComplete(void) {
 
     NSString *version = info[@"version"];
     if (![version isKindOfClass:[NSString class]] || version.length == 0) return NO;
-    return [version isEqualToString:[CdnImportPlan sharedPlan].targetVersion];
+    return CdnImporterAssetVersionIsCurrent(version, [CdnImportPlan sharedPlan].targetVersion);
 }
 
 NSString *CdnImporterAssetCompletenessNote(void) {
@@ -418,11 +438,14 @@ NSString *CdnImporterAssetCompletenessNote(void) {
     if (version.length == 0) {
         return @"不完整（info.json 里没有 version）";
     }
-    if (![version isEqualToString:target]) {
-        return [NSString stringWithFormat:@"版本不符（info.json %@ / 计划 %@）", version, target];
+    if (!CdnImporterAssetVersionIsCurrent(version, target)) {
+        return [NSString stringWithFormat:@"版本过低（info.json %@ / 计划 %@）", version, target];
     }
     if (![manager fileExistsAtPath:CdnImporterAssetDownloadDir()]) {
         return @"不完整（download 目录不存在）";
+    }
+    if (![version isEqualToString:target]) {
+        return [NSString stringWithFormat:@"完整（info.json %@ 不早于计划 %@，客户端已自行升级）", version, target];
     }
     return [NSString stringWithFormat:@"完整（info.json %@，assetRecoveryInfo 空，无 partial）", version];
 }

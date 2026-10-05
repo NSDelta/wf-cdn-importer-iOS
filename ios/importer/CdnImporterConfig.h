@@ -112,7 +112,8 @@ NSString *CdnImporterDocumentsDirectory(void);
 /// 导出日志时顺手写下的副本路径（<Documents>/CdnImporter.log）
 NSString *CdnImporterExportedLogPath(void);
 
-/// 客户端口径的「资源已完整」：info.json 存在、version == 计划目标版本、assetRecoveryInfo 为空数组、
+/// 客户端口径的「资源已完整」：info.json 存在、version 不早于计划目标版本（≥ —— 计划 1.4.54、
+/// 客户端联网自升级到 1.4.56 之后仍算完整，不把悬浮球放回来）、assetRecoveryInfo 为空数组、
 /// 没有任何 partial_downloaded* 残留、download/ 目录存在。
 /// 只用客户端自己的判据（isDownloaded + isAssetComplete），不猜别的。
 BOOL CdnImporterAssetsAreComplete(void);
