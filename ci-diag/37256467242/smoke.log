@@ -1,0 +1,29 @@
+✓ 合成迷你 IPA：/Users/runner/work/_temp/out/mini.ipa
+  33800 字节 / 3 个条目；命令区结束 @184，头部余量 16200 字节
+输入 IPA：/Users/runner/work/_temp/out/mini.ipa（33800 B，sha256 0c51eecf16a0…）
+输入 dylib：/Users/runner/work/_temp/out/CdnImporter.dylib（446672 B，sha256 09e73613f971…）
+IPA 条目：3
+主二进制：Payload/CdnImporterSmoke.app/CdnImporterSmoke（32768 B）
+头部：ncmds=1 sizeofcmds=152 命令区结束 @184；首个有数据的 section @16384（余量 16200 B）
+写入 LC_LOAD_DYLIB：cmdsize=72 @184，ncmds 1 → 2，sizeofcmds 152 → 224
+新增条目：Payload/CdnImporterSmoke.app/Frameworks/CdnImporter.dylib（deflate 134373 B → 446672 B，mode 0755）
+✓ dylib 是 64 位 Mach-O 动态库 — filetype=6（6=MH_DYLIB, 8=MH_BUNDLE）
+✓ 主二进制未加密（cryptid=0） — cryptid=0（加密二进制无法注入）
+✓ 有足够的头部余量放新命令 — 需要到 @256，首个 section @16384
+✓ 待写入的 72 字节余量全为 0 — 余量 @184..255 全为 0
+✓ 文件长度不变 — 32768 → 32768
+✓ 原有 load command 逐字节不变
+✓ 所有 section 偏移/尺寸不变
+✓ ncmds 与预期一致 — 1 → 2
+✓ sizeofcmds 与预期一致 — 152 → 224
+✓ 新命令位于命令区末尾且可解析
+✓ install name 可读回
+✓ IPA 条目数符合预期 — 3 → 4
+✓ 重建后的 IPA 可解析 — 4 vs 4
+✓ 回读主二进制与内存一致
+✓ 回读 dylib 与输入一致
+✓ 其余条目内容不变
+已写出：/Users/runner/work/_temp/out/mini-injected.ipa（168363 B，Δ+134563 B）
+报告：/Users/runner/work/_temp/out/mini-injected.ipa.build-report.json
+下一步：用 Sideloadly 侧载该 IPA（它会重签整个 bundle，包含新加的嵌套 dylib）。
+注入断言 16 条全过；ncmds 1→2，sizeofcmds 152→224

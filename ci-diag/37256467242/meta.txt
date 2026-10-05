@@ -1,0 +1,8 @@
+run=37256467242 attempt=6
+ref=refs/heads/main sha=9c7194dd80f1fc55098c0c4fa62dfa03a1c823a4
+patch_base=http://192.168.1.10:8001/patch/cn/
+ProductName:		macOS
+ProductVersion:		26.6.2
+BuildVersion:		25G83
+Xcode 26.6
+Build version 17F113
