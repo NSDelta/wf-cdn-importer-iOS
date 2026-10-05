@@ -1,0 +1,120 @@
+{
+  "tool": "ios/importer/tools/inject-dylib.mjs",
+  "generatedAt": "2026-10-05T02:43:11.015Z",
+  "input": {
+    "ipa": "/Users/runner/work/_temp/out/mini.ipa",
+    "ipaBytes": 33800,
+    "ipaSha256": "0c51eecf16a0463c818cad643a27e58239aa79e3c689b5d3abf74e51b1efe6c8",
+    "dylib": "/Users/runner/work/_temp/out/CdnImporter.dylib",
+    "dylibBytes": 446672,
+    "dylibSha256": "09e73613f97137cd30e146c59d7b9b77f2226dcd54259a9922ef63901f41ea60",
+    "entryCount": 3
+  },
+  "injection": {
+    "mainEntry": "Payload/CdnImporterSmoke.app/CdnImporterSmoke",
+    "binBytes": 32768,
+    "binSha256Before": "84e353e3caa53dc618d661f8f5fe1e3c48e279d31795465448d833ab0ca0decb",
+    "ncmdsBefore": 1,
+    "sizeofcmdsBefore": 152,
+    "commandsEndBefore": 184,
+    "cryptid": 0,
+    "installName": "@executable_path/Frameworks/CdnImporter.dylib",
+    "existingDylibPaths": [],
+    "minSectionOffset": 16384,
+    "ncmdsAfter": 2,
+    "sizeofcmdsAfter": 224,
+    "binSha256After": "f331272b8b5334fac960e82c35ac6805c6c016c9d54ae3b572f311a801d33347",
+    "dylibUploadName": "CdnImporter.dylib",
+    "dylibEntryName": "Payload/CdnImporterSmoke.app/Frameworks/CdnImporter.dylib",
+    "mainEntryCompressedAfter": 32768
+  },
+  "output": {
+    "path": "/Users/runner/work/_temp/out/mini-injected.ipa",
+    "bytes": 168363,
+    "sha256": "f8050863c9688e76ddee1197febf65da66a2ca93d362edc66f3abfcbeb86102c",
+    "entryCount": 4,
+    "sizeDelta": 134563
+  },
+  "assertions": [
+    {
+      "name": "dylib 是 64 位 Mach-O 动态库",
+      "ok": true,
+      "detail": "filetype=6（6=MH_DYLIB, 8=MH_BUNDLE）"
+    },
+    {
+      "name": "主二进制未加密（cryptid=0）",
+      "ok": true,
+      "detail": "cryptid=0（加密二进制无法注入）"
+    },
+    {
+      "name": "有足够的头部余量放新命令",
+      "ok": true,
+      "detail": "需要到 @256，首个 section @16384"
+    },
+    {
+      "name": "待写入的 72 字节余量全为 0",
+      "ok": true,
+      "detail": "余量 @184..255 全为 0"
+    },
+    {
+      "name": "文件长度不变",
+      "ok": true,
+      "detail": "32768 → 32768"
+    },
+    {
+      "name": "原有 load command 逐字节不变",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "所有 section 偏移/尺寸不变",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ncmds 与预期一致",
+      "ok": true,
+      "detail": "1 → 2"
+    },
+    {
+      "name": "sizeofcmds 与预期一致",
+      "ok": true,
+      "detail": "152 → 224"
+    },
+    {
+      "name": "新命令位于命令区末尾且可解析",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "install name 可读回",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "IPA 条目数符合预期",
+      "ok": true,
+      "detail": "3 → 4"
+    },
+    {
+      "name": "重建后的 IPA 可解析",
+      "ok": true,
+      "detail": "4 vs 4"
+    },
+    {
+      "name": "回读主二进制与内存一致",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "回读 dylib 与输入一致",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "其余条目内容不变",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}
